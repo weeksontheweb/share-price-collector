@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -102,36 +101,54 @@ func actionShareGrabber(c *cli.Context) error {
 	fmt.Printf("passwd = %s\n", passwd)
 	fmt.Printf("dbname = %s\n", dbname)
 
-	readConfig()
+	//readConfig()
 
 	midPrice, bidPrice, askPrice, err := scrapeSharePrices("TEP")
 	fmt.Printf("TEP\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
 
+	if err != nil {
+		panic(err)
+	}
+
 	midPrice, bidPrice, askPrice, err = scrapeSharePrices("ARCM")
 	fmt.Printf("ARCM\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
+
+	if err != nil {
+		panic(err)
+	}
 
 	midPrice, bidPrice, askPrice, err = scrapeSharePrices("XTR")
 	fmt.Printf("XTR\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
 
+	if err != nil {
+		panic(err)
+	}
+
 	midPrice, bidPrice, askPrice, err = scrapeSharePrices("BIRG")
 	fmt.Printf("BIRG\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
 
-	//See if the database is requested in the command line.
-	databaseRequested, err := useDatabase()
-
 	if err != nil {
 		panic(err)
-	} else {
-		if databaseRequested {
-			db, err := ConnectToDatabase(host, port, user, passwd, dbname)
-
-			if err != nil {
-				panic(err)
-			}
-		} else {
-
-		}
 	}
+
+	/*
+		//See if the database is requested in the command line.
+		databaseRequested, err := useDatabase()
+
+		if err != nil {
+			panic(err)
+		} else {
+			if databaseRequested {
+				db, err := ConnectToDatabase(host, port, user, passwd, dbname)
+
+				if err != nil {
+					panic(err)
+				}
+			} else {
+
+			}
+		}
+	*/
 
 	//fmt.Printf("Here %d\n", db.Stats().WaitDuration)
 	return nil
@@ -200,6 +217,7 @@ func scrapeSharePrice(body string, searchFor string) float64 {
 	return s
 }
 
+/*
 //Determines whether a database is requested on the command line.
 // If no database flags are requested then no database requested.
 //Error if partial database details given
@@ -225,13 +243,5 @@ func useDatabase() (bool, error) {
 	default:
 		return false, errors.New("an error")
 	}
-
-	if host == "" && user == "" && passwd == "" {
-		return false, nil
-	}
-
-	if host == "" && user == "" && passwd == "" {
-		return false, fmt.Errorf("Insufficient database flags used.")
-	}
-
 }
+*/
