@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"share-price-collector/internal/database"
+	settingsfile "share-price-collector/internal/settings-file"
 	"strconv"
 	"strings"
 
@@ -132,47 +133,36 @@ func actionShareGrabber(c *cli.Context) error {
 		panic(err)
 	}
 
-	var gg database.ShareDB
-
-	fmt.Printf("gg = %T\n", gg)
-
-	/*
-		//See if the database is requested in the command line.
-		databaseRequested, err := useDatabase()
-
-		if err != nil {
-			panic(err)
-		} else {
-			if databaseRequested {
-				db, err := ConnectToDatabase(host, port, user, passwd, dbname)
-
-				if err != nil {
-					panic(err)
-				}
-			} else {
-
-			}
-		}
-	*/
-
-	//fmt.Printf("Here %d\n", db.Stats().WaitDuration)
-	return nil
-}
-
-func ConnectToDatabase(host string, port int, user string, password string, dbname string) (*sql.DB, error) {
-
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	newdb, err := sql.Open("postgres", psqlInfo)
+	//See if the database is requested in the command line.
+	databaseRequested, err := requireToUseDatabase()
 
 	if err != nil {
-		fmt.Println("Got an error here")
-		return nil, err
+		panic(err)
+	} else {
+		if databaseRequested {
+
+			//Open the requested database.
+			db, err := database.ConnectToDatabase(host, port, user, passwd, dbname)
+
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("db = %T\n", db)
+		} else {
+
+			//Database not requested, so read open config file instead.
+			settings, err := settingsfile.LoadSettingsFile()
+
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("settings = %T\n", settings)
+		}
 	}
 
-	return newdb, nil
+	return nil
 }
 
 func scrapeSharePrices(shareCode string) (float64, float64, float64, error) {
@@ -222,11 +212,10 @@ func scrapeSharePrice(body string, searchFor string) float64 {
 	return s
 }
 
-/*
 //Determines whether a database is requested on the command line.
 // If no database flags are requested then no database requested.
 //Error if partial database details given
-func useDatabase() (bool, error) {
+func requireToUseDatabase() (bool, error) {
 
 	var nCount int
 
@@ -249,4 +238,3 @@ func useDatabase() (bool, error) {
 		return false, errors.New("an error")
 	}
 }
-*/
