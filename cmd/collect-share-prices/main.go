@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"share-price-collector/internal/database"
 	"strconv"
 	"strings"
 
@@ -130,6 +131,10 @@ func actionShareGrabber(c *cli.Context) error {
 	if err != nil {
 		panic(err)
 	}
+
+	var gg database.ShareDB
+
+	fmt.Printf("gg = %T\n", gg)
 
 	/*
 		//See if the database is requested in the command line.
