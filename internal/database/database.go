@@ -5,20 +5,11 @@ import (
 	"fmt"
 )
 
-//var ShareDB sql.DB
-
-//type (
-//	ShareDB sql.DB
-//)
-
-type ShareDB struct (
-	db *sql.DB
+type (
+	ShareDB struct {
+		db *sql.DB
+	}
 )
-//type (
-//	ShareDB struct (
-//		db *sql.DB
-//	)
-//)
 
 func (db *ShareDB) ConnectToDatabase(host string, port int, user string, password string, dbname string) (*sql.DB, error) {
 
