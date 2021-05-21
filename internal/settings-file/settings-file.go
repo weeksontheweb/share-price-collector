@@ -11,6 +11,7 @@ func LoadSettingsFile() (*os.File, error) {
 	var file *os.File
 
 	_, err := os.Stat("../../settings.json")
+
 	if os.IsNotExist(err) {
 		log.Fatal("File does not exist.")
 	}

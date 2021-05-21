@@ -1,17 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
+	config "share-price-collector/internal/configuration"
 	"share-price-collector/internal/database"
+	"share-price-collector/internal/scraper"
 	settingsfile "share-price-collector/internal/settings-file"
-	"strconv"
-	"strings"
 
 	//"github.com/weeksontheweb/share-price-collector/internal/database"
 	//"github.com/weeksontheweb/share-price-collector/internal/database"
@@ -90,48 +87,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 //Anything called by the cli library has to have the
 //signature func (c *cli.Context) error
 func actionShareGrabber(c *cli.Context) error {
 
+	var myConfig config.ConfigDetails
+
 	fmt.Printf("host = %s\n", host)
 	fmt.Printf("port = %d\n", port)
 	fmt.Printf("user = %s\n", user)
 	fmt.Printf("passwd = %s\n", passwd)
 	fmt.Printf("dbname = %s\n", dbname)
-
-	//readConfig()
-
-	midPrice, bidPrice, askPrice, err := scrapeSharePrices("TEP")
-	fmt.Printf("TEP\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
-
-	if err != nil {
-		panic(err)
-	}
-
-	midPrice, bidPrice, askPrice, err = scrapeSharePrices("ARCM")
-	fmt.Printf("ARCM\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
-
-	if err != nil {
-		panic(err)
-	}
-
-	midPrice, bidPrice, askPrice, err = scrapeSharePrices("XTR")
-	fmt.Printf("XTR\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
-
-	if err != nil {
-		panic(err)
-	}
-
-	midPrice, bidPrice, askPrice, err = scrapeSharePrices("BIRG")
-	fmt.Printf("BIRG\t\t%f\t%f\t%f\n", midPrice, bidPrice, askPrice)
-
-	if err != nil {
-		panic(err)
-	}
 
 	//See if the database is requested in the command line.
 	databaseRequested, err := requireToUseDatabase()
@@ -142,74 +110,54 @@ func actionShareGrabber(c *cli.Context) error {
 		if databaseRequested {
 
 			//Open the requested database.
-			db, err := database.ConnectToDatabase(host, port, user, passwd, dbname)
+			var db database.SharesDB
+
+			db, err = db.ConnectToDatabase(host, port, user, passwd, dbname)
+
+			fmt.Println("aaaa")
 
 			if err != nil {
 				panic(err)
 			}
 
-			fmt.Printf("db = %T\n", db)
+			myConfig = myConfig.ReadConfig(db)
+
+			for _, share := range myConfig.Shares {
+				fmt.Printf("After ReadConfig. Share Code = %s\n", share.Code)
+				fmt.Printf("After ReadConfig. Share Description = %s\n", share.Description)
+				fmt.Printf("After ReadConfig. Share PollStart = %s\n", share.PollStart)
+				fmt.Printf("After ReadConfig. Share PollEnd = %s\n", share.PollEnd)
+				fmt.Printf("After ReadConfig. Share PollInterval = %d\n", share.PollInterval)
+				midPrice, bidPrice, askPrice, err := scraper.RetrieveSharePrices(share.Code)
+				fmt.Printf("%s\t\t%f\t%f\t%f\n", share.Code, midPrice, bidPrice, askPrice)
+
+				if err != nil {
+					panic(err)
+				}
+			}
+
 		} else {
-
-			//Database not requested, so read open config file instead.
-			settings, err := settingsfile.LoadSettingsFile()
+			jsonFile, err := settingsfile.LoadSettingsFile()
 
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
-			fmt.Printf("settings = %T\n", settings)
+			myConfig = myConfig.ReadConfig(jsonFile)
+
+			for _, share := range myConfig.Shares {
+				fmt.Printf("After ReadConfig. Share Code = %s\n", share.Code)
+				midPrice, bidPrice, askPrice, err := scraper.RetrieveSharePrices(share.Code)
+				fmt.Printf("%s\t\t%f\t%f\t%f\n", share.Code, midPrice, bidPrice, askPrice)
+
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
 
 	return nil
-}
-
-func scrapeSharePrices(shareCode string) (float64, float64, float64, error) {
-
-	var midPrice float64
-	var bidPrice float64
-	var askPrice float64
-
-	resp, err := http.Get("https://www.lse.co.uk/shareprice.asp?shareprice=" + shareCode)
-	if err != nil {
-		// handle error
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if bytes.Contains(body, []byte("html")) {
-		webBody := string(body[:])
-
-		lookFor := "<span data-item=\"" + shareCode + ".L\" data-field=\"MID_PRICE\"  data-flash=\"true\">"
-		midPrice = float64(scrapeSharePrice(webBody, lookFor))
-
-		lookFor = "<span data-item=\"" + shareCode + ".L\" data-field=\"BID\"  data-flash=\"true\">"
-		bidPrice = float64(scrapeSharePrice(webBody, lookFor))
-
-		lookFor = "<span data-item=\"" + shareCode + ".L\" data-field=\"ASK\"  data-flash=\"true\">"
-		askPrice = float64(scrapeSharePrice(webBody, lookFor))
-	}
-
-	return midPrice, bidPrice, askPrice, nil
-}
-
-func scrapeSharePrice(body string, searchFor string) float64 {
-
-	index := strings.Index(body, searchFor)
-	elementLength := len(searchFor)
-	truncatedBody := body[index+elementLength:]
-	nextElementPosition := strings.Index(truncatedBody, "<")
-
-	fValue := strings.Replace(truncatedBody[:nextElementPosition], ",", "", -1)
-
-	s, err := strconv.ParseFloat(fValue, 64)
-
-	if err != nil {
-		fmt.Printf("%T, %v\n", s, s)
-	}
-
-	return s
 }
 
 //Determines whether a database is requested on the command line.

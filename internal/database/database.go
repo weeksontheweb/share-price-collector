@@ -5,28 +5,21 @@ import (
 	"fmt"
 )
 
-type (
-	ShareDB struct {
-		db *sql.DB
-	}
-)
-
-func (db *ShareDB) ConnectToDatabase(host string, port int, user string, password string, dbname string) (*sql.DB, error) {
-
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	newdb, err := sql.Open("postgres", psqlInfo)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return newdb, nil
+type ShareCodesRecord struct {
+	ShareCode        string
+	ShareDescription string
+	PollStart        string
+	PollEnd          string
+	PollInterval     int
 }
 
-func ConnectToDatabase(host string, port int, user string, password string, dbname string) (*sql.DB, error) {
+type SharesDB struct {
+	*sql.DB
+}
+
+func (db *SharesDB) ConnectToDatabase(host string, port int, user string, password string, dbname string) (SharesDB, error) {
+
+	var sharesDB SharesDB
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -34,9 +27,55 @@ func ConnectToDatabase(host string, port int, user string, password string, dbna
 
 	newdb, err := sql.Open("postgres", psqlInfo)
 
+	sharesDB.DB = newdb
+
 	if err != nil {
-		return nil, err
+		return sharesDB, err
 	}
 
-	return newdb, nil
+	return sharesDB, nil
+}
+
+func (db *SharesDB) RetrieveShares() []ShareCodesRecord {
+
+	sqlStatement := "SELECT * FROM read_share_codes()"
+
+	rows, err := db.DB.Query(sqlStatement)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var shareCodesTable []ShareCodesRecord
+
+	for rows.Next() {
+
+		var shareCode, shareDescription string
+		var pollStart, pollEnd string
+		var pollInterval int
+
+		err := rows.Scan(&shareCode, &shareDescription, &pollStart, &pollEnd, &pollInterval)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		var shareCodesRecord ShareCodesRecord
+
+		shareCodesRecord.ShareCode = shareCode
+		shareCodesRecord.ShareDescription = shareDescription
+		shareCodesRecord.PollStart = pollStart
+		shareCodesRecord.PollEnd = pollEnd
+		shareCodesRecord.PollInterval = pollInterval
+
+		shareCodesTable = append(shareCodesTable, shareCodesRecord)
+	}
+
+	defer rows.Close()
+
+	return shareCodesTable
+}
+
+func (db *SharesDB) AddShareCode() {
+
 }
