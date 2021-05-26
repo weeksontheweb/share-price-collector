@@ -10,8 +10,6 @@ import (
 	"share-price-collector/internal/scraper"
 	settingsfile "share-price-collector/internal/settings-file"
 
-	//"github.com/weeksontheweb/share-price-collector/internal/database"
-	//"github.com/weeksontheweb/share-price-collector/internal/database"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli/v2"
 )
