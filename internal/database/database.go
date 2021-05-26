@@ -76,6 +76,21 @@ func (db *SharesDB) RetrieveShares() []ShareCodesRecord {
 	return shareCodesTable
 }
 
-func (db *SharesDB) AddShareCode() {
+func (db *SharesDB) AddShareCode(shareCode string, shareDescription string, pollStart string, pollEnd string, pollInterval int) (int64, error) {
+
+	stmt, err := db.Prepare("SELECT * FROM create_share_code($1,$2,$3,$4,$5)")
+
+	if err != nil {
+		return 0, err
+	}
+
+	result, err := stmt.Exec(shareCode, shareDescription, pollStart, pollEnd, pollInterval)
+
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	return rowsAffected, nil
 
 }

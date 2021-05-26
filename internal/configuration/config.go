@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -69,7 +70,6 @@ func readConfigFromFile() (ConfigDetails, error) {
 		fmt.Println(err)
 	}
 
-	fmt.Println("Successfully opened settings.json")
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
 
@@ -87,6 +87,25 @@ func readConfigFromFile() (ConfigDetails, error) {
 	}
 
 	return sharesConfig, nil
+}
+
+func writeConfigToFile(config ConfigDetails) error {
+
+	err := settingsfile.BackupSettingsFile()
+
+	if err != nil {
+		return nil
+	}
+
+	file, _ := json.MarshalIndent(config, "", " ")
+
+	err = settingsfile.CreateSettingsFile(file)
+
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }
 
 func readConfigFromDB(db database.SharesDB) (ConfigDetails, error) {
@@ -115,4 +134,75 @@ func readConfigFromDB(db database.SharesDB) (ConfigDetails, error) {
 
 	return sharesConfig, nil
 
+}
+
+func copyFile() {
+
+	// Open original file
+	original, err := os.Open("original.txt")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer original.Close()
+
+	// Create new file
+	new, err := os.Create("new.txt")
+
+	if err != nil {
+		log.Fatal(err)
+
+	}
+	defer new.Close()
+
+	//This will copy
+	bytesWritten, err := io.Copy(new, original)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Bytes Written: %d\n", bytesWritten)
+}
+
+func (c ConfigDetails) AddShareToConfig(i interface{}, shareCode string, shareDescription string, pollStart string, pollEnd string, pollInterval int) error {
+
+	//var newConfig ConfigDetails
+	//var err error
+
+	//switch bb := i.(type) {
+	switch bb := i.(type) {
+	case *os.File:
+		fmt.Println("In case for *os.File. shareCode = " + shareCode)
+
+		newConfig, err := readConfigFromFile()
+
+		if err != nil {
+			log.Panic(err)
+		}
+
+		//Add share to struct and marshall.
+		var newShare share
+
+		newShare.Code = shareCode
+		newShare.Description = shareDescription
+		newShare.PollStart = pollStart
+		newShare.PollEnd = pollEnd
+		newShare.PollInterval = pollInterval
+
+		newConfig.Shares = append(newConfig.Shares, newShare)
+
+		writeConfigToFile(newConfig)
+
+	case database.SharesDB:
+		fmt.Println("In case for sql.DB. shareCode = " + shareCode)
+
+		//Don't need to read the config from the db.
+		//Just insert  a new record.
+
+		bb.AddShareCode(shareCode, shareDescription, pollStart, pollEnd, pollInterval)
+
+	default:
+		log.Fatal()
+	}
+
+	return nil
 }
