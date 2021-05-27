@@ -206,3 +206,48 @@ func (c ConfigDetails) AddShareToConfig(i interface{}, shareCode string, shareDe
 
 	return nil
 }
+
+func (c ConfigDetails) RemoveShareFromConfig(i interface{}, shareCode string) error {
+
+	switch bb := i.(type) {
+	case *os.File:
+
+		var err error
+		var newConfig ConfigDetails
+
+		c, err = readConfigFromFile()
+
+		if err != nil {
+			log.Panic(err)
+		}
+
+		newConfig.PollStart = c.PollStart
+		newConfig.PollEnd = c.PollEnd
+		newConfig.PollInterval = c.PollInterval
+
+		for _, shareRecord := range c.Shares {
+			if shareRecord.Code != shareCode {
+				newConfig.Shares = append(newConfig.Shares, shareRecord)
+			}
+		}
+
+		c = newConfig
+
+		writeConfigToFile(c)
+
+	case database.SharesDB:
+
+		fmt.Println("In case for sql.DB. shareCode = " + shareCode)
+
+		//Don't need to read the config from the db.
+		//Just insert  a new record.
+
+		bb.RemoveShareCode(shareCode)
+
+	default:
+
+		log.Fatal()
+	}
+
+	return nil
+}
