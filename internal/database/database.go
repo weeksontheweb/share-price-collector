@@ -94,3 +94,41 @@ func (db *SharesDB) AddShareCode(shareCode string, shareDescription string, poll
 	return rowsAffected, nil
 
 }
+
+func (db *SharesDB) RemoveShareCode(shareCode string) (int64, error) {
+
+	var returnAmount int
+
+	fmt.Printf("In remove and share code = %s\n", shareCode)
+
+	stmt, err := db.Prepare("SELECT * FROM remove_share_code($1)")
+
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+
+	result, err := stmt.Query(shareCode)
+
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+
+	for result.Next() {
+
+		err := result.Scan(&returnAmount)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		fmt.Printf("Rows pulled = %d.\n", returnAmount)
+
+	}
+
+	//rowsAffected, _ := result.RowsAffected()
+	//return rowsAffected, nil
+	return 1, nil
+
+}

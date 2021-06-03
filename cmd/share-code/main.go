@@ -152,16 +152,70 @@ func main() {
 			{
 				Name:  "remove",
 				Usage: "Remove a share code from the config.",
-				/*				Action: func(c *cli.Context) error {
-								ns, nsErr := net.LookupIP(c.String("host"))
-								if nsErr != nil {
-									return nsErr
-								}
-								for _, v := range ns {
-									fmt.Println(v)
-								}
-								return nil
-							},*/
+
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "host",
+						Value:       "",
+						Usage:       "Host where database is located",
+						Destination: &host,
+					},
+					&cli.IntFlag{
+						Name:        "port",
+						Value:       0,
+						Usage:       "Database port",
+						Destination: &port,
+					},
+					&cli.StringFlag{
+						Name:        "dbname",
+						Value:       "",
+						Usage:       "Database name",
+						Destination: &dbname,
+					},
+					&cli.StringFlag{
+						Name:        "user",
+						Value:       "",
+						Required:    false,
+						Usage:       "Database username",
+						Destination: &user,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Value:       "",
+						Usage:       "Database password",
+						Destination: &passwd,
+					},
+					&cli.StringFlag{
+						Name:        "sharecode",
+						Value:       "",
+						Usage:       "Unique share code.",
+						Destination: &sharecode,
+					},
+					&cli.StringFlag{
+						Name:        "sharedesc",
+						Value:       "",
+						Usage:       "Share description.",
+						Destination: &sharedesc,
+					},
+					&cli.StringFlag{
+						Name:        "pollstart",
+						Value:       "",
+						Usage:       "Polling start time.",
+						Destination: &pollstart,
+					},
+					&cli.StringFlag{
+						Name:        "pollend",
+						Value:       "",
+						Usage:       "Polling end time.",
+						Destination: &pollend,
+					},
+					&cli.IntFlag{
+						Name:        "pollinterval",
+						Value:       0,
+						Usage:       "Polling interval (minutes).",
+						Destination: &pollinterval,
+					},
+				},
 			},
 			{
 				Name:  "list",
@@ -307,6 +361,9 @@ func shareCodeAdd(c *cli.Context) error {
 func shareCodeRemove(c *cli.Context) error {
 
 	fmt.Println("Share code remove.")
+
+	var myConfig config.ConfigDetails
+
 	//See if the database is requested in the command line.
 	databaseRequested, err := requireToUseDatabase()
 
@@ -326,8 +383,19 @@ func shareCodeRemove(c *cli.Context) error {
 			if err != nil {
 				panic(err)
 			}
+
+			myConfig.RemoveShareFromConfig(db, sharecode)
+
 		} else {
 			fmt.Println("database not requested.")
+
+			jsonFile, err := settingsfile.LoadSettingsFile()
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			myConfig.RemoveShareFromConfig(jsonFile, sharecode)
 		}
 	}
 	return nil
