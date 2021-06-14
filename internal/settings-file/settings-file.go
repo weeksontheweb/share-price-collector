@@ -27,6 +27,7 @@ func LoadSettingsFile() (*os.File, error) {
 
 }
 
+/*
 func LoadSettingsFileIntoConfig(settingsFile) (*os.File, error) {
 
 	var file *os.File
@@ -46,6 +47,7 @@ func LoadSettingsFileIntoConfig(settingsFile) (*os.File, error) {
 	return file, err
 
 }
+*/
 
 func BackupSettingsFile() error {
 

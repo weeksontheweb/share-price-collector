@@ -112,11 +112,6 @@ func readConfigFromDB(db database.SharesDB) (ConfigDetails, error) {
 
 	var sharesConfig ConfigDetails
 
-	//Load defaults (store these in database at some point)
-	sharesConfig.PollStart = "08:00"
-	sharesConfig.PollEnd = "17:00"
-	sharesConfig.PollInterval = 5
-
 	retrievedRecords := db.RetrieveShares()
 
 	for _, shareRecord := range retrievedRecords {
@@ -125,6 +120,7 @@ func readConfigFromDB(db database.SharesDB) (ConfigDetails, error) {
 		shareRecordConfig.Code = shareRecord.ShareCode
 		shareRecordConfig.Description = shareRecord.ShareDescription
 		shareRecordConfig.PollStart = shareRecord.PollStart
+
 		shareRecordConfig.PollEnd = shareRecord.PollEnd
 		shareRecordConfig.PollInterval = shareRecord.PollInterval
 
@@ -250,4 +246,75 @@ func (c ConfigDetails) RemoveShareFromConfig(i interface{}, shareCode string) er
 	}
 
 	return nil
+}
+
+func (c ConfigDetails) ListSharesFromConfig(i interface{}) (ConfigDetails, error) {
+
+	var newConfig ConfigDetails
+
+	switch bb := i.(type) {
+	case *os.File:
+
+		var err error
+		//var newConfig ConfigDetails
+
+		newConfig, err = readConfigFromFile()
+
+		if err != nil {
+			return newConfig, err
+		}
+
+		/*
+			newConfig.PollStart = c.PollStart
+			newConfig.PollEnd = c.PollEnd
+			newConfig.PollInterval = c.PollInterval
+
+			for _, shareRecord := range c.Shares {
+				if shareRecord.Code != shareCode {
+					newConfig.Shares = append(newConfig.Shares, shareRecord)
+				}
+			}
+		*/
+		c = newConfig
+
+		//writeConfigToFile(c)
+
+		return newConfig, nil
+
+	case database.SharesDB:
+
+		fmt.Println("******* In case for sql.DB.")
+
+		var err error
+
+		//Don't need to read the config from the db.
+		//Just insert  a new record.
+
+		bb.RetrieveShares()
+		newConfig, err := readConfigFromDB(bb)
+
+		if err != nil {
+			return newConfig, err
+		}
+
+		/*
+			for _, shareRecord := range newConfig.Shares {
+				fmt.Printf("Code in struct = %s\n", shareRecord.Code)
+			}
+		*/
+		c = newConfig
+
+		/*
+			for _, shareRecord := range c.Shares {
+				fmt.Printf("Code in struct2 = %s\n", shareRecord.Code)
+			}
+		*/
+
+		return newConfig, nil
+
+	default:
+
+		log.Fatal()
+		return newConfig, nil
+	}
 }
