@@ -132,3 +132,42 @@ func (db *SharesDB) RemoveShareCode(shareCode string) (int64, error) {
 	return 1, nil
 
 }
+
+func (db *SharesDB) ListShareCodes() (int64, error) {
+
+	//var returnAmount int
+
+	fmt.Printf("In list share code = %s\n", "WWWW")
+
+	stmt, err := db.Prepare("SELECT * FROM read_share_codes()")
+
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+
+	//result, err := stmt.Query("WWWW")
+	result, err := stmt.Query()
+
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+
+	for result.Next() {
+
+		var share_code, share_description, poll_start, poll_end string
+		var poll_interval int
+
+		err := result.Scan(&share_code, &share_description, &poll_start, &poll_end, &poll_interval)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		fmt.Printf("Rows pulled = %s, %s. %s, %s, %d\n", share_code, share_description, poll_start, poll_end, poll_interval)
+
+	}
+
+	return 1, nil
+}

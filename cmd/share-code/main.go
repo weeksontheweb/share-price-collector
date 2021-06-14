@@ -220,6 +220,40 @@ func main() {
 			{
 				Name:  "list",
 				Usage: "List all share codes in the config.",
+
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "host",
+						Value:       "",
+						Usage:       "Host where database is located",
+						Destination: &host,
+					},
+					&cli.IntFlag{
+						Name:        "port",
+						Value:       0,
+						Usage:       "Database port",
+						Destination: &port,
+					},
+					&cli.StringFlag{
+						Name:        "dbname",
+						Value:       "",
+						Usage:       "Database name",
+						Destination: &dbname,
+					},
+					&cli.StringFlag{
+						Name:        "user",
+						Value:       "",
+						Required:    false,
+						Usage:       "Database username",
+						Destination: &user,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Value:       "",
+						Usage:       "Database password",
+						Destination: &passwd,
+					},
+				},
 				/*				Action: func(c *cli.Context) error {
 								ns, nsErr := net.LookupIP(c.String("host"))
 								if nsErr != nil {
@@ -403,7 +437,8 @@ func shareCodeRemove(c *cli.Context) error {
 
 func shareCodeList(c *cli.Context) error {
 
-	fmt.Println("Share code list.")
+	var myConfig config.ConfigDetails
+
 	//See if the database is requested in the command line.
 	databaseRequested, err := requireToUseDatabase()
 
@@ -411,20 +446,41 @@ func shareCodeList(c *cli.Context) error {
 		panic(err)
 	} else {
 		if databaseRequested {
-
-			fmt.Println("database requested.")
-
 			var db database.SharesDB
 
 			db, err = db.ConnectToDatabase(host, port, user, passwd, dbname)
 
-			fmt.Println("aaaa")
-
 			if err != nil {
+				fmt.Println("Could not connect to database.")
 				panic(err)
 			}
+
+			myConfig, err = myConfig.ListSharesFromConfig(db)
+
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+
 		} else {
-			fmt.Println("database not requested.")
+			jsonFile, err := settingsfile.LoadSettingsFile()
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			myConfig, err = myConfig.ListSharesFromConfig(jsonFile)
+
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		}
+
+		fmt.Printf("Share code list:\n\n")
+
+		for _, shareRecord := range myConfig.Shares {
+			fmt.Printf("%s (%s)\n", shareRecord.Code, shareRecord.Description)
 		}
 	}
 
