@@ -16,16 +16,25 @@ func RetrieveSharePrices(shareCode string) (float64, float64, float64, error) {
 	var askPrice float64
 
 	resp, err := http.Get("https://www.lse.co.uk/shareprice.asp?shareprice=" + shareCode)
+
 	if err != nil {
 		// handle error
 	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	shareCode = strings.Trim(shareCode, " ")
 
 	if bytes.Contains(body, []byte("html")) {
 		webBody := string(body[:])
 
 		lookFor := "<span data-item=\"" + shareCode + ".L\" data-field=\"MID_PRICE\"  data-flash=\"true\">"
+		fmt.Printf("Looking for midPrice = %s\n", "<span data-item=\""+shareCode+".L\" data-field=\"MID_PRICE\"  data-flash=\"true\">")
 		midPrice = float64(retrieveSharePrice(webBody, lookFor))
 
 		lookFor = "<span data-item=\"" + shareCode + ".L\" data-field=\"BID\"  data-flash=\"true\">"
@@ -35,6 +44,7 @@ func RetrieveSharePrices(shareCode string) (float64, float64, float64, error) {
 		askPrice = float64(retrieveSharePrice(webBody, lookFor))
 	}
 
+	fmt.Printf("midPrice = %f\n", midPrice)
 	return midPrice, bidPrice, askPrice, nil
 }
 
