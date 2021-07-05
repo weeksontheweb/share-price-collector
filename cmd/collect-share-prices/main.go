@@ -10,6 +10,9 @@ import (
 	"share-price-collector/internal/scraper"
 	settingsfile "share-price-collector/internal/settings-file"
 
+	//resultsfile "share-price-collector/internal/results-file"
+	resultsfile "share-price-collector/internal/results-file"
+
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli/v2"
 )
@@ -23,6 +26,7 @@ var (
 	dbname   string
 	nodb     bool
 	output   string
+	logto    string
 )
 
 func main() {
@@ -76,6 +80,12 @@ func main() {
 				Usage:       "Results output type",
 				Destination: &output,
 			},
+			&cli.StringFlag{
+				Name:        "logto",
+				Value:       "",
+				Usage:       "Destination to log results to",
+				Destination: &logto,
+			},
 		},
 	}
 
@@ -92,12 +102,16 @@ func main() {
 func actionShareGrabber(c *cli.Context) error {
 
 	var myConfig config.ConfigDetails
+	var db database.SharesDB
+	var midPrice, bidPrice, askPrice float64
 
 	fmt.Printf("host = %s\n", host)
 	fmt.Printf("port = %d\n", port)
 	fmt.Printf("user = %s\n", user)
 	fmt.Printf("passwd = %s\n", passwd)
 	fmt.Printf("dbname = %s\n", dbname)
+	fmt.Printf("output = %s\n", output)
+	fmt.Printf("logto = %s\n", logto)
 
 	//See if the database is requested in the command line.
 	databaseRequested, err := requireToUseDatabase()
@@ -108,32 +122,17 @@ func actionShareGrabber(c *cli.Context) error {
 		if databaseRequested {
 
 			//Open the requested database.
-			var db database.SharesDB
+			//var db database.SharesDB
 
 			db, err = db.ConnectToDatabase(host, port, user, passwd, dbname)
 
-			fmt.Println("aaaa")
+			fmt.Println("aaaa----")
 
 			if err != nil {
 				panic(err)
 			}
 
 			myConfig = myConfig.ReadConfig(db)
-
-			for _, share := range myConfig.Shares {
-				fmt.Printf("After ReadConfig. Share Code = %s\n", share.Code)
-				fmt.Printf("After ReadConfig. Share Description = %s\n", share.Description)
-				fmt.Printf("After ReadConfig. Share PollStart = %s\n", share.PollStart)
-				fmt.Printf("After ReadConfig. Share PollEnd = %s\n", share.PollEnd)
-				fmt.Printf("After ReadConfig. Share PollInterval = %d\n", share.PollInterval)
-				midPrice, bidPrice, askPrice, err := scraper.RetrieveSharePrices(share.Code)
-				fmt.Printf("%s\t\t%f\t%f\t%f\n", share.Code, midPrice, bidPrice, askPrice)
-
-				if err != nil {
-					panic(err)
-				}
-			}
-
 		} else {
 			jsonFile, err := settingsfile.LoadSettingsFile()
 
@@ -142,17 +141,31 @@ func actionShareGrabber(c *cli.Context) error {
 			}
 
 			myConfig = myConfig.ReadConfig(jsonFile)
+		}
 
-			for _, share := range myConfig.Shares {
-				fmt.Printf("After ReadConfig. Share Code = %s\n", share.Code)
-				midPrice, bidPrice, askPrice, err := scraper.RetrieveSharePrices(share.Code)
-				fmt.Printf("%s\t\t%f\t%f\t%f\n", share.Code, midPrice, bidPrice, askPrice)
+		for _, share := range myConfig.Shares {
+			midPrice, bidPrice, askPrice, err = scraper.RetrieveSharePrices(share.Code)
 
-				if err != nil {
-					panic(err)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("logto = %s\n", logto)
+
+			switch logto {
+			case "db":
+				if !databaseRequested {
+					fmt.Print("Requested to log to db, but no database connection specified.")
+				} else {
+					db.LogSharePrice(share.Code, midPrice, bidPrice, askPrice)
 				}
+			case "file":
+				//Append to file.
+				resultsfile.AppendToResultsFile(share.Code, midPrice, bidPrice, askPrice)
+			default:
 			}
 		}
+
 	}
 
 	return nil
@@ -183,4 +196,9 @@ func requireToUseDatabase() (bool, error) {
 	default:
 		return false, errors.New("an error")
 	}
+}
+
+func logSharePrice() {
+
+	//db.LogSharePrice
 }

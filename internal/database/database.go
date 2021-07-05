@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type ShareCodesRecord struct {
@@ -170,4 +171,46 @@ func (db *SharesDB) ListShareCodes() (int64, error) {
 	}
 
 	return 1, nil
+}
+
+func (db *SharesDB) LogSharePrice(code string, midPrice float64, bidPrice float64, askPrice float64) {
+
+	//	statement := `INSERT INTO SharePrices
+	//				(TimeDate,ShareCodeID,MidPrice,BidPrice,AskPrice)
+	//				VALUES (?,?,?,?,?)`
+
+	fmt.Println("*aaa*")
+
+	stmt, err := db.Prepare("SELECT * FROM create_share_price_record($1,$2,$3,$4,$5)")
+	//stmt, err := db.Prepare("SELECT * FROM create_share_price_record()")
+	//stmt, err := db.Prepare("SELECT * FROM read_share_codes()")
+
+	/*
+		stmt, err := db.Prepare(`	INSERT INTO SharePrices
+												(TimeDate,ShareCodeID,MidPrice,BidPrice,AskPrice)
+									VALUES 		(?,?,?,?,?)`)
+	*/
+	fmt.Println("*aab*")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("*aac*")
+	t := time.Now()
+
+	fmt.Println("aaa")
+	fmt.Printf("%s\t%s\t%f\t%f\t%f\n", code, t.Format("2006-01-02 15:04:05"), midPrice, bidPrice, askPrice)
+	_, err = stmt.Exec(code, t.Format("2006-01-02 15:04:05"), midPrice, bidPrice, askPrice)
+
+	fmt.Println("bbb")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Printf("%s\t\t%f\t%f\t%f\n", "TEP", midPrice, bidPrice, askPrice)
+
+	//fmt.Println(result.RowsAffected())
+
 }
