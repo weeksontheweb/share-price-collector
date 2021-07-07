@@ -9,6 +9,7 @@ import (
 	"share-price-collector/internal/database"
 	"share-price-collector/internal/scraper"
 	settingsfile "share-price-collector/internal/settings-file"
+	"time"
 
 	//resultsfile "share-price-collector/internal/results-file"
 	resultsfile "share-price-collector/internal/results-file"
@@ -18,15 +19,16 @@ import (
 )
 
 var (
-	language string
-	host     string
-	port     int
-	user     string
-	passwd   string
-	dbname   string
-	nodb     bool
-	output   string
-	logto    string
+	language  string
+	host      string
+	port      int
+	user      string
+	passwd    string
+	dbname    string
+	nodb      bool
+	output    string
+	logto     string
+	recursive bool
 )
 
 func main() {
@@ -86,6 +88,13 @@ func main() {
 				Usage:       "Destination to log results to",
 				Destination: &logto,
 			},
+			&cli.BoolFlag{
+				Name:        "recursive",
+				Value:       false,
+				Required:    false,
+				Usage:       "Keep polling instead of run once",
+				Destination: &recursive,
+			},
 		},
 	}
 
@@ -103,7 +112,7 @@ func actionShareGrabber(c *cli.Context) error {
 
 	var myConfig config.ConfigDetails
 	var db database.SharesDB
-	var midPrice, bidPrice, askPrice float64
+	//var midPrice, bidPrice, askPrice float64
 
 	fmt.Printf("host = %s\n", host)
 	fmt.Printf("port = %d\n", port)
@@ -143,29 +152,71 @@ func actionShareGrabber(c *cli.Context) error {
 			myConfig = myConfig.ReadConfig(jsonFile)
 		}
 
-		for _, share := range myConfig.Shares {
-			midPrice, bidPrice, askPrice, err = scraper.RetrieveSharePrices(share.Code)
+		if recursive {
+			fmt.Printf("Run recursively. Value = %t\n", recursive)
+			//Action recursive poll (use polling times in config)
 
-			if err != nil {
-				panic(err)
-			}
+			for {
 
-			fmt.Printf("logto = %s\n", logto)
+				//Check time here
+				for _, share := range myConfig.Shares {
+					startTime, err := time.Parse("2006-01-02T15:04:05.000Z", share.PollStart)
 
-			switch logto {
-			case "db":
-				if !databaseRequested {
-					fmt.Print("Requested to log to db, but no database connection specified.")
-				} else {
-					db.LogSharePrice(share.Code, midPrice, bidPrice, askPrice)
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					endTime, err := time.Parse("2006-01-02T15:04:05.000Z", share.PollStart)
+
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					nextPollTime, err := time.Parse("2006-01-02T15:04:05.000Z", share.NextPollTime)
+
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					if time.Now().After(startTime) && time.Now().Before(endTime) {
+						if time.Now().After(nextPollTime) {
+							pollShares(share.Code, databaseRequested, db)
+						}
+					}
 				}
-			case "file":
-				//Append to file.
-				resultsfile.AppendToResultsFile(share.Code, midPrice, bidPrice, askPrice)
-			default:
+			}
+		} else {
+			fmt.Printf("Run once. Value = %t\n", recursive)
+			//Action single poll (disregard polling times in config).
+			fmt.Printf("Time.Now() = %t\n", time.Now())
+			for _, share := range myConfig.Shares {
+				pollShares(share.Code, databaseRequested, db)
 			}
 		}
+		/*
+			for _, share := range myConfig.Shares {
+				midPrice, bidPrice, askPrice, err = scraper.RetrieveSharePrices(share.Code)
 
+				if err != nil {
+					panic(err)
+				}
+
+				fmt.Printf("logto = %s\n", logto)
+
+				switch logto {
+				case "db":
+					if !databaseRequested {
+						fmt.Print("Requested to log to db, but no database connection specified.")
+					} else {
+						db.LogSharePrice(share.Code, midPrice, bidPrice, askPrice)
+					}
+				case "file":
+					//Append to file.
+					resultsfile.AppendToResultsFile(share.Code, midPrice, bidPrice, askPrice)
+				default:
+				}
+			}
+		*/
 	}
 
 	return nil
@@ -201,4 +252,29 @@ func requireToUseDatabase() (bool, error) {
 func logSharePrice() {
 
 	//db.LogSharePrice
+}
+
+func pollShares(shareCode string, databaseRequested bool, db database.SharesDB) {
+
+	midPrice, bidPrice, askPrice, err := scraper.RetrieveSharePrices(shareCode)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("logto = %s\n", logto)
+
+	switch logto {
+	case "db":
+		if !databaseRequested {
+			fmt.Print("Requested to log to db, but no database connection specified.")
+		} else {
+			db.LogSharePrice(shareCode, midPrice, bidPrice, askPrice)
+		}
+	case "file":
+		//Append to file.
+		resultsfile.AppendToResultsFile(shareCode, midPrice, bidPrice, askPrice)
+	default:
+	}
+
 }

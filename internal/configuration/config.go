@@ -20,6 +20,7 @@ type share struct {
 	PollStart    string `json:"startPoll"`
 	PollEnd      string `json:"endPoll"`
 	PollInterval int    `json:"interval"`
+	NextPollTime string `json:"nextPollTime"`
 }
 
 type ConfigDetails struct {
